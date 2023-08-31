@@ -1,38 +1,33 @@
-from collections import namedtuple
-import altair as alt
-import math
-import pandas as pd
 import streamlit as st
+import pandas as pd
+import plotly.express as px
 
-"""
-# Welcome to Streamlit!
+# Load your data
+df = pd.read_excel('sample_product_costs.xlsx')
 
-Edit `/streamlit_app.py` to customize this app to your heart's desire :heart:
+# Page title
+st.title('Product Cost Analysis Dashboard')
 
-If you have any questions, checkout our [documentation](https://docs.streamlit.io) and [community
-forums](https://discuss.streamlit.io).
+# Sidebar for selecting a product
+selected_product = st.sidebar.selectbox('Select a Product', df['Product'].unique())
 
-In the meantime, below is an example of what you can do with just a few lines of code:
-"""
+# Filter the data based on the selected product
+filtered_df = df[df['Product'] == selected_product]
 
+# Show data summary
+st.write(f"## Data Summary for {selected_product}")
+st.write(filtered_df)
 
-with st.echo(code_location='below'):
-    total_points = st.slider("Number of points in spiral", 1, 5000, 2000)
-    num_turns = st.slider("Number of turns in spiral", 1, 100, 9)
+# Show scatter plot
+st.write(f"## Cost Analysis for {selected_product}")
+scatter_fig = px.scatter(filtered_df, x='Month', y='Cost', color='Category', title=f'Cost Analysis for {selected_product}')
+st.plotly_chart(scatter_fig)
 
-    Point = namedtuple('Point', 'x y')
-    data = []
-
-    points_per_turn = total_points / num_turns
-
-    for curr_point_num in range(total_points):
-        curr_turn, i = divmod(curr_point_num, points_per_turn)
-        angle = (curr_turn + 1) * 2 * math.pi * i / points_per_turn
-        radius = curr_point_num / total_points
-        x = radius * math.cos(angle)
-        y = radius * math.sin(angle)
-        data.append(Point(x, y))
-
-    st.altair_chart(alt.Chart(pd.DataFrame(data), height=500, width=500)
-        .mark_circle(color='#0068c9', opacity=0.5)
-        .encode(x='x:Q', y='y:Q'))
+# Show bar chart for cost percentage by category
+st.write(f"## Cost Percentage by Category for {selected_product}")
+total_cost_by_month = filtered_df.groupby(['Month'])['Cost'].sum().reset_index()
+filtered_df = filtered_df.merge(total_cost_by_month, on='Month', suffixes=('', '_total'))
+filtered_df['Cost_Percentage'] = (filtered_df['Cost'] / filtered_df['Cost_total']) * 100
+bar_fig = px.bar(filtered_df, x='Month', y='Cost_Percentage', color='Category',
+                 title=f'Cost Percentage by Category for {selected_product}', range_y=[0, 100])
+st.plotly_chart(bar_fig)
